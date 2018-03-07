@@ -148,7 +148,10 @@ pageSource$
       comment,
       subtitle,
       spec,
-      images: [primaryImage].concat(smallImages)
+      images: [primaryImage].concat(smallImages),
+      tagKeySet: {
+        [result.data.parent.key]: true
+      }
     };
     console.log(product);
   });
