@@ -42,7 +42,6 @@ pageSource$.take(1).subscribe(result => {
     .map(a => $(a))
     .map(getTagFromElm);
 
-  console.log(mainTags.length, 'ddd');
   let leafTags = mainTags
     .toArray()
     .map(tag => {
@@ -91,7 +90,8 @@ pageSource$
     const $ = cheerio.load(result.src);
     const hrefs = $('#product-loop .product-info-inner a')
       .toArray()
-      .map(a => $(a).attr('href'));
+      .map(a => $(a).attr('href'))
+      .reduce((acc, cur) => acc.concat(cur));
     console.log(hrefs);
   });
 
