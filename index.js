@@ -70,29 +70,79 @@ pageSource$.take(1).subscribe(result => {
   //   console.log(leafTags);
 
   var links = leafTags
-    .slice(0, 3)
+    .slice(0, 1)
     .map(link => queueLink(link.href, { parent: link, level: 1 }));
   //   console.log(links);
 });
 
-// pageSource$
-//   .skip(1)
-//   .filter(result => result.data && result.data.level == 1)
-//   .subscribe(result => {
-//     console.log('real data', result.url, result.data);
-//   });
-
 pageSource$
   .filter(result => result.data && result.data.level == 1)
   .subscribe(result => {
-    // console.log('lvellll 11', result.url, result.data);
-
     const $ = cheerio.load(result.src);
     const hrefs = $('#product-loop .product-info-inner a')
       .toArray()
-      .map(a => $(a).attr('href'))
-      .reduce((acc, cur) => acc.concat(cur));
-    console.log(hrefs);
+      .map(a => $(a).attr('href'));
+
+    hrefs.map(f =>
+      queueLink(f, {
+        parent: result.data.parent,
+        level: 2
+      })
+    );
+    // console.log(hrefs.length);
   });
 
-link$.subscribe(l => console.log(l, 'link'));
+pageSource$
+  .filter(result => result.data && result.data.level == 2)
+  .subscribe(result => {
+    // console.log('level 2 result ', result.data);
+
+    const $ = cheerio.load(result.src);
+    const $des = $('#product-description');
+
+    const name = $des.children('h1').text();
+
+    const $length = $des.find('div.swatch');
+
+    const availables = $length.children('div.available');
+    console.log(availables.length);
+
+    const length = {};
+    availables
+      .toArray()
+      .map(a => $(a).attr('data-value'))
+      .forEach(v => (length[v] = true));
+
+    const soldOut = $length.children('div.soldout');
+    soldOut
+      .toArray()
+      .map(a => $(a).attr('data-value'))
+      .forEach(v => (length[v] = false));
+
+    const $refer = $des.find('.rte');
+    const comment = $refer.children('p').text();
+    const subtitle = $refer.children('h2').text();
+    const spec = $refer
+      .find('ul li')
+      .toArray()
+      .map(a => $(a).text());
+
+    const primaryImage = $('.bigimage img').attr('src');
+    const smallImages = $('.thumbnail-slider .slide a')
+      .toArray()
+      .map(a => $(a).attr('data-image'));
+
+    // console.log(length);
+
+    const product = {
+      name,
+      length,
+      comment,
+      subtitle,
+      spec,
+      images: [primaryImage].concat(smallImages)
+    };
+    console.log(product);
+  });
+
+// link$.subscribe(l => console.log(l, 'link'));
