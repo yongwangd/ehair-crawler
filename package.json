@@ -11,6 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "cheerio": "^1.0.0-rc.2",
+    "firebase": "^4.10.1",
     "sleepydog": "^0.4.0",
     "ssl-root-cas": "^1.2.5"
   }
