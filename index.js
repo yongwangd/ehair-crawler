@@ -69,8 +69,11 @@ pageSource$.take(1).subscribe(result => {
 
   console.log(leafTags);
 
-  var links = leafTags.map(t => t.href).slice(0, 3);
-  console.log(links);
+  var links = leafTags
+    .map(t => t.href)
+    .slice(0, 3)
+    .map(queueLink);
+  //   console.log(links);
 });
 
 pageSource$.skip(1).subscribe(result => {
