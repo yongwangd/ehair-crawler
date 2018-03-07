@@ -31,19 +31,30 @@ pageSource$.take(1).subscribe(result => {
 
   const mainTags = $('ul#main-nav>li');
 
+  const rootTags = $('ul#main-nav>li')
+    .toArray()
+    .filter(
+      li =>
+        !['Sale', 'Before & After'].includes(
+          $(li)
+            .children('a')
+            .text()
+        )
+    );
+
   const getTagFromElm = elm => ({
-    key: getKeyFromHref(elm.attr('href')),
-    label: elm.text(),
-    href: elm.attr('href')
+    key: getKeyFromHref(elm.attr('href')).trim(),
+    label: elm.text().trim(),
+    href: elm.attr('href').trim()
   });
 
-  const mainTagLinks = $('ul#main-nav>li>a')
-    .toArray()
-    .map(a => $(a))
+  const mainTagLinks = rootTags
+    .map(li => $(li).children('a'))
     .map(getTagFromElm);
 
-  let leafTags = mainTags
-    .toArray()
+  console.log(mainTagLinks);
+
+  let leafTags = rootTags
     .map(tag => {
       link = $(tag).find(
         '.mega-stack>li>a, .nested>li>a, .submenu>li:not(.nest)> a'
@@ -67,9 +78,10 @@ pageSource$.take(1).subscribe(result => {
     })
     .reduce((acc, cur) => acc.concat(cur), []);
 
-  //   console.log(leafTags);
+  console.log(leafTags);
 
-  var links = leafTags
+  leafTags
+    // .filter(tag => tag.key == '3d-mink')
     .slice(0, 1)
     .map(link => queueLink(link.href, { parent: link, level: 1 }));
   //   console.log(links);
@@ -89,14 +101,11 @@ pageSource$
         level: 2
       })
     );
-    // console.log(hrefs.length);
   });
 
 pageSource$
   .filter(result => result.data && result.data.level == 2)
   .subscribe(result => {
-    // console.log('level 2 result ', result.data);
-
     const $ = cheerio.load(result.src);
     const $des = $('#product-description');
 
@@ -105,7 +114,6 @@ pageSource$
     const $length = $des.find('div.swatch');
 
     const availables = $length.children('div.available');
-    console.log(availables.length);
 
     const length = {};
     availables
