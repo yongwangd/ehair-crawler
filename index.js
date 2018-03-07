@@ -23,6 +23,7 @@ const getKeyFromHref = href => {
   return arr[arr.length - 1];
 };
 
+//get all the menus
 pageSource$.take(1).subscribe(result => {
   console.log(result.url);
   let $ = cheerio.load(result.src);
@@ -67,17 +68,31 @@ pageSource$.take(1).subscribe(result => {
     })
     .reduce((acc, cur) => acc.concat(cur), []);
 
-  console.log(leafTags);
+  //   console.log(leafTags);
 
   var links = leafTags
-    .map(t => t.href)
     .slice(0, 3)
-    .map(queueLink);
+    .map(link => queueLink(link.href, { parent: link, level: 1 }));
   //   console.log(links);
 });
 
-pageSource$.skip(1).subscribe(result => {
-  console.log('real data', result);
-});
+// pageSource$
+//   .skip(1)
+//   .filter(result => result.data && result.data.level == 1)
+//   .subscribe(result => {
+//     console.log('real data', result.url, result.data);
+//   });
+
+pageSource$
+  .filter(result => result.data && result.data.level == 1)
+  .subscribe(result => {
+    // console.log('lvellll 11', result.url, result.data);
+
+    const $ = cheerio.load(result.src);
+    const hrefs = $('#product-loop .product-info-inner a')
+      .toArray()
+      .map(a => $(a).attr('href'));
+    console.log(hrefs);
+  });
 
 link$.subscribe(l => console.log(l, 'link'));
