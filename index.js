@@ -7,6 +7,12 @@ let { pageSource$, queueLink, link$ } = staticCrawler({
   startFrom: '/'
 });
 
+const getKey = label =>
+  label
+    .split(' ')
+    .map(a => a.toLowerCase())
+    .join('-');
+
 pageSource$.subscribe(result => {
   console.log(result.url);
   let $ = cheerio.load(result.src);
@@ -31,6 +37,7 @@ pageSource$.subscribe(result => {
       .toArray()
       .map(a => $(a))
       .map(elm => ({
+        key: getKey(elm.text()),
         href: elm.attr('href'),
         label: elm.text()
       }));
