@@ -113,12 +113,12 @@ pageSource$
 
     const allTags = mainTagLinks.concat(leafTags);
 
-    allTags
-      .filter(tg => !existingTags.find(e => e.key == tg.key))
-      .forEach(tag => {
-        var newTag = tagsRef.push();
-        newTag.set(tag);
-      });
+    // allTags
+    //   .filter(tg => !existingTags.find(e => e.key == tg.key))
+    //   .forEach(tag => {
+    //     var newTag = tagsRef.push();
+    //     newTag.set(tag);
+    //   });
   });
 
 pageSource$
@@ -129,7 +129,9 @@ pageSource$
       .toArray()
       .map(a => $(a).attr('href'));
 
-    hrefs.map(f =>
+    var ec = existingContacts.map(c => c.ehairKey);
+
+    hrefs.filter(href => !ec.includes(href.split('/').reverse()[0])).map(f =>
       queueLink(f, {
         parent: result.data.parent,
         level: 2,
@@ -151,18 +153,24 @@ pageSource$
     const availables = $length.children('div.available');
 
     const length = [];
-    availables
-      .toArray()
-      .map(a => $(a).attr('data-value'))
-      //   .forEach(v => (length[v] = true));
-      .forEach(v => length.push({ label: v, available: true }));
+    const lengthDivs = $length.children('div');
 
-    const soldOut = $length.children('div.soldout');
-    soldOut
-      .toArray()
-      .map(a => $(a).attr('data-value'))
-      //   .forEach(v => (length[v] = false));
-      .forEach(v => length.push({ label: v, available: false }));
+    lengthDivs.toArray().forEach(div => {
+      const available = $(div).hasClass('available');
+      length.push({ label: $(div).attr('data-value'), available });
+    });
+
+    // availables
+    //   .toArray()
+    //   .map(a => $(a).attr('data-value'))
+    //   //   .forEach(v => (length[v] = true));
+    //   .forEach(v => length.push({ label: v, available: true }));
+
+    // const soldOut = $length.children('div.soldout');
+    // soldOut
+    //   .toArray()
+    //   .map(a => $(a).attr('data-value'))
+    //   .forEach(v => length.push({ label: v, available: false }));
 
     const $refer = $des.find('.rte');
     const comment = $refer.children('p').text();
@@ -172,7 +180,7 @@ pageSource$
       .toArray()
       .map(a => $(a).text());
 
-    const primaryImage = $('.bigimage img').attr('src');
+    // const primaryImage = $('.bigimage img').attr('src');
     const smallImages = $('.thumbnail-slider .slide a')
       .toArray()
       .map(a => $(a).attr('data-image'));
@@ -188,7 +196,7 @@ pageSource$
       comment,
       subtitle,
       spec,
-      images: [primaryImage].concat(smallImages),
+      images: smallImages,
       tagKeySet: {
         [result.data.parent.key]: true
       },
