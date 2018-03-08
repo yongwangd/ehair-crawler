@@ -12,6 +12,28 @@ var config = {
 };
 firebase.initializeApp(config);
 
+const contactsRef = firebase.database().ref('contacts/');
+const tagsRef = firebase.database().ref('contactTags/');
+
+let existingTags = [];
+let existingContacts = [];
+
+tagsRef.on('value', v => {
+  const ob = v.val() || [];
+  existingTags = Object.entries(ob).map(([id, value]) => {
+    value._id = id;
+    return value;
+  });
+});
+
+contactsRef.on('value', v => {
+  const ob = v.val() || [];
+  existingContacts = Object.entries(ob).map(([id, value]) => {
+    value._id = id;
+    return value;
+  });
+});
+
 require('ssl-root-cas').inject();
 let { pageSource$, queueLink, link$ } = staticCrawler({
   domain: 'https://www.ehairoutlet.com',
@@ -24,68 +46,80 @@ const getKeyFromHref = href => {
 };
 
 //get all the menus
-pageSource$.take(1).subscribe(result => {
-  console.log(result.url);
-  let $ = cheerio.load(result.src);
-  //   console.log(result.src);
+pageSource$
+  .take(1)
+  .delay(3000)
+  .subscribe(result => {
+    console.log(result.url);
+    let $ = cheerio.load(result.src);
+    //   console.log(result.src);
 
-  const mainTags = $('ul#main-nav>li');
+    const mainTags = $('ul#main-nav>li');
 
-  const rootTags = $('ul#main-nav>li')
-    .toArray()
-    .filter(
-      li =>
-        !['Sale', 'Before & After'].includes(
-          $(li)
+    const rootTags = $('ul#main-nav>li')
+      .toArray()
+      .filter(
+        li =>
+          !['Sale', 'Before & After'].includes(
+            $(li)
+              .children('a')
+              .text()
+          )
+      );
+
+    const getTagFromElm = elm => ({
+      key: getKeyFromHref(elm.attr('href')).trim(),
+      label: elm.text().trim(),
+      href: elm.attr('href').trim()
+    });
+
+    const mainTagLinks = rootTags
+      .map(li => $(li).children('a'))
+      .map(getTagFromElm);
+
+    //   console.log(mainTagLinks);
+
+    let leafTags = rootTags
+      .map(tag => {
+        link = $(tag).find(
+          '.mega-stack>li>a, .nested>li>a, .submenu>li:not(.nest)> a'
+        );
+        const parentKey = getKeyFromHref(
+          $(tag)
             .children('a')
-            .text()
-        )
-    );
+            .attr('href')
+        );
 
-  const getTagFromElm = elm => ({
-    key: getKeyFromHref(elm.attr('href')).trim(),
-    label: elm.text().trim(),
-    href: elm.attr('href').trim()
+        return link
+          .toArray()
+          .map(a => $(a))
+          .map(getTagFromElm)
+          .map(child => {
+            child.parentTagSet = {
+              [parentKey]: true
+            };
+            return child;
+          });
+      })
+      .reduce((acc, cur) => acc.concat(cur), []);
+
+    //   console.log(leafTags);
+
+    leafTags
+      // .filter(tag => tag.key == '3d-mink')
+      //   .slice(0, 1)
+      .map(link => queueLink(link.href, { parent: link, level: 1 }));
+    //   console.log(links);
+
+    const allTags = mainTagLinks.concat(leafTags);
+
+    allTags
+      .filter(tg => !existingTags.find(e => e.key == tg.key))
+      .forEach(tag => {
+        var newTag = tagsRef.push();
+        newTag.set(tag);
+      });
   });
-
-  const mainTagLinks = rootTags
-    .map(li => $(li).children('a'))
-    .map(getTagFromElm);
-
-  console.log(mainTagLinks);
-
-  let leafTags = rootTags
-    .map(tag => {
-      link = $(tag).find(
-        '.mega-stack>li>a, .nested>li>a, .submenu>li:not(.nest)> a'
-      );
-      const parentKey = getKeyFromHref(
-        $(tag)
-          .children('a')
-          .attr('href')
-      );
-
-      return link
-        .toArray()
-        .map(a => $(a))
-        .map(getTagFromElm)
-        .map(child => {
-          child.parentTagSet = {
-            [parentKey]: true
-          };
-          return child;
-        });
-    })
-    .reduce((acc, cur) => acc.concat(cur), []);
-
-  console.log(leafTags);
-
-  leafTags
-    // .filter(tag => tag.key == '3d-mink')
-    .slice(0, 1)
-    .map(link => queueLink(link.href, { parent: link, level: 1 }));
-  //   console.log(links);
-});
 
 pageSource$
   .filter(result => result.data && result.data.level == 1)
@@ -98,7 +132,8 @@ pageSource$
     hrefs.map(f =>
       queueLink(f, {
         parent: result.data.parent,
-        level: 2
+        level: 2,
+        href: f
       })
     );
   });
@@ -115,17 +150,19 @@ pageSource$
 
     const availables = $length.children('div.available');
 
-    const length = {};
+    const length = [];
     availables
       .toArray()
       .map(a => $(a).attr('data-value'))
-      .forEach(v => (length[v] = true));
+      //   .forEach(v => (length[v] = true));
+      .forEach(v => length.push({ label: v, available: true }));
 
     const soldOut = $length.children('div.soldout');
     soldOut
       .toArray()
       .map(a => $(a).attr('data-value'))
-      .forEach(v => (length[v] = false));
+      //   .forEach(v => (length[v] = false));
+      .forEach(v => length.push({ label: v, available: false }));
 
     const $refer = $des.find('.rte');
     const comment = $refer.children('p').text();
@@ -142,6 +179,9 @@ pageSource$
 
     // console.log(length);
 
+    const href = result.data.href;
+    const ehairKey = href.split('/').reverse()[0];
+
     const product = {
       name,
       length,
@@ -151,9 +191,19 @@ pageSource$
       images: [primaryImage].concat(smallImages),
       tagKeySet: {
         [result.data.parent.key]: true
-      }
+      },
+      href: result.data.href,
+      ehairKey
     };
     console.log(product);
+    console.log('-----------------');
+    console.log('-----------------');
+    console.log('-----------------');
+
+    if (!existingContacts.find(c => c.ehairKey == ehairKey)) {
+      var newRecord = contactsRef.push();
+      newRecord.set(product);
+    }
   });
 
 // link$.subscribe(l => console.log(l, 'link'));
