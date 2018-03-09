@@ -178,7 +178,8 @@ pageSource$
     const spec = $refer
       .find('ul li')
       .toArray()
-      .map(a => $(a).text());
+      .map(a => $(a).text())
+      .map(t => t.replace(/(\r\n\t|\n|\r\t)/gm, ''));
 
     // const primaryImage = $('.bigimage img').attr('src');
     const smallImages = $('.thumbnail-slider .slide a')
@@ -195,6 +196,7 @@ pageSource$
       length,
       comment,
       subtitle,
+      inStock: true,
       spec,
       images: smallImages,
       tagKeySet: {
@@ -208,10 +210,10 @@ pageSource$
     console.log('-----------------');
     console.log('-----------------');
 
-    if (!existingContacts.find(c => c.ehairKey == ehairKey)) {
-      var newRecord = contactsRef.push();
-      newRecord.set(product);
-    }
+    // if (!existingContacts.find(c => c.ehairKey == ehairKey)) {
+    //   var newRecord = contactsRef.push();
+    //   newRecord.set(product);
+    // }
   });
 
 // link$.subscribe(l => console.log(l, 'link'));
